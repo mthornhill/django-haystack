@@ -79,7 +79,7 @@ class SearchQuerySet(object):
             # Fill more of the cache.
             self._fill_cache()
     
-    def _fill_cache(self):
+    def _fill_cache(self, k=None):
         from haystack import site
         
         if self._result_cache is None:
@@ -87,8 +87,12 @@ class SearchQuerySet(object):
         
         # Tell the query where to start from and how many we'd like.
         cache_length = len(self._result_cache)
-        self.query._reset()
-        self.query.set_limits(cache_length, cache_length + ITERATOR_LOAD_PER_QUERY)
+        self.query._reset()        
+        if k:
+            self.query.set_limits(k.start, k.stop)
+        else:
+            self.query.set_limits(cache_length, cache_length + ITERATOR_LOAD_PER_QUERY)
+            
         results = self.query.get_results()
         
         # Check if we wish to load all objects.
@@ -161,13 +165,13 @@ class SearchQuerySet(object):
                     bound = k + 1
                 
                 try:
-                    while len(self._result_cache) < bound and not self._cache_is_full():
-                        self._fill_cache()
+                    while len(self._result_cache) < bound-k.start and not self._cache_is_full():
+                        self._fill_cache(k)
                 except StopIteration:
                     # There's nothing left, even though the bound is higher.
                     pass
             
-            return self._result_cache[k]
+            return self._result_cache
 
         if isinstance(k, slice):
             qs = self._clone()

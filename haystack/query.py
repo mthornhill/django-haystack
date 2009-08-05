@@ -340,7 +340,10 @@ class SearchQuerySet(object):
         # Pseudo-tokenize the rest of the query.
         keywords = query_string.split()
         
+        filter_keywords = ['and', 'or', 'not']
+                        
         # Loop through keywords and add filters to the query.
+        prev_keyword = None
         for keyword in keywords:
             exclude = False
             
@@ -352,8 +355,17 @@ class SearchQuerySet(object):
             
             if exclude:
                 clone = clone.exclude(content=cleaned_keyword)
-            else:
-                clone = clone.filter(content=cleaned_keyword)
+            else:                
+                if prev_keyword is not None and prev_keyword.lower() in filter_keywords :
+                    if prev_keyword.lower() == 'and':
+                        clone = clone.filter_and(content=cleaned_keyword)
+                    elif prev_keyword.lower() == 'or':
+                        clone = clone.filter_or(content=cleaned_keyword)
+                    elif prev_keyword.lower() == 'not':
+                        clone = clone.exclude(content=cleaned_keyword)
+                else:                
+                    clone = clone.filter(content=cleaned_keyword)
+            prev_keyword = keyword
         
         return clone
     
